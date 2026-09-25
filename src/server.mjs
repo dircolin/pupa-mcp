@@ -78,7 +78,7 @@ export async function runHttp({ port = +process.env.PORT || 8790, host = process
         const raw = await readBody(req); let body; try { body = JSON.parse(raw || '{}'); } catch { res.writeHead(400); return res.end('bad json'); }
         const isInit = body && body.method === 'initialize';
         if (!s) {
-          if (!isInit) { res.writeHead(400, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ jsonrpc: '2.0', error: { code: -32000, message: 'no session — initialize first' }, id: null })); }
+          if (!isInit) { /* 세션을 모름(서버 재시작 등) → 404 로 답해야 클라이언트가 스스로 다시 initialize 한다 (MCP 규격) */ res.writeHead(404, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ jsonrpc: '2.0', error: { code: -32001, message: 'session not found — re-initialize' }, id: null })); }
           const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: () => randomUUID(), onsessioninitialized: (id) => { sessions.set(id, s); }, enableJsonResponse: false });
           s = { transport, api, last: Date.now() };
           s.server = createPupaServer((extra) => s.api);
