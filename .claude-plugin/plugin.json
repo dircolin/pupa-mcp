@@ -1,0 +1,27 @@
+{
+  "name": "pupa",
+  "version": "0.1.0",
+  "description": "PUPA (PUPASTAGE) — 한국어 시나리오·광고 콘티를 컷으로 나누고(샷 플래너) Seedance 2.5·Kling 3.0·GPT Image 2·Nano Banana 로 이미지/영상을 생성. WOON 크레딧 원장 연동.",
+  "author": {
+    "name": "BOKcorporation",
+    "url": "https://pupastage.com"
+  },
+  "homepage": "https://github.com/dircolin/pupa-mcp",
+  "license": "MIT",
+  "keywords": [
+    "video",
+    "storyboard",
+    "seedance",
+    "kling",
+    "korean",
+    "advertising",
+    "mcp"
+  ],
+  "mcpServers": {
+    "pupa": {
+      "type": "http",
+      "url": "https://proxy.pupastage.com/mcp"
+    }
+  },
+  "skills": "./skills/"
+}
