@@ -13,7 +13,7 @@ import { registerTools } from './tools.mjs';
 import { PupaApi, DEFAULT_BASE, loadTokenFile, saveTokenFile } from './pupa-api.mjs';
 import { createOAuth, OAuthStore, readBody } from './oauth.mjs';
 
-export const VERSION = '0.1.0';
+export const VERSION = '0.1.1';
 const INSTRUCTIONS = [
   'PUPA(PUPASTAGE) — 한국어 시나리오/광고 콘티를 컷으로 나누고(샷 플래너, 0 크레딧), AI 이미지·영상을 생성한다(WOON 크레딧 차감, 전표 기록).',
   '순서: pupa_prompt_rules → pupa_parse_screenplay → pupa_plan_shots → (pupa_generate_image 로 캐릭터/제품 레퍼런스) → pupa_generate_video → pupa_job_status. 저장은 pupa_save_scenario.',

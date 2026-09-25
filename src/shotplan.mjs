@@ -37,22 +37,25 @@ export function baseFromKeywords(text) {
 /** scene = {cuts:[{content,dialogue:[{c,t}],archive:[],sec}]} ; genre 'ad'|'story' */
 export function planScene(scene, genre = 'story', opts = {}) {
   const cuts = scene.cuts || [], n = cuts.length, ad = genre === 'ad';
-  const speakers = {}; cuts.forEach(c => (c.dialogue || []).forEach(d => { if (d && d.c) speakers[d.c] = 1; }));
+  const isCap = (d) => !!(d && (d.na || /^(자막|캡션|타이틀|슬로건|내레이션|나레이션|내레이터|NA|N\.A\.?|V\.?O\.?|CAPTION|TITLE|SUPER|NARR?)$/i.test(String(d.c || ''))));
+  const speakers = {}; cuts.forEach(c => (c.dialogue || []).forEach(d => { if (d && d.c && !isCap(d)) speakers[d.c] = 1; }));
   const nChars = Object.keys(speakers).length;
   const out = [];
   for (let idx = 0; idx < n; idx++) {
     const cut = cuts[idx];
     const txt = String(cut.content || '') + ' ' + (cut.dialogue || []).map(d => d.t || '').join(' ') + ' ' + (cut.archive || []).join(' ');
     const base = baseFromKeywords(txt); const o = Object.assign({}, base); const why = [];
-    const dlg = (cut.dialogue || []).filter(d => d && d.t);
+    const dlgAll = (cut.dialogue || []).filter(d => d && d.t);
+    const dlg = dlgAll.filter(d => !isCap(d)); /* 자막·내레이션은 화자가 아니다 */
     const spk = dlg.length ? String(dlg[0].c || '') : '';
     const prev = idx > 0 ? out[idx - 1] : null, prevCut = idx > 0 ? cuts[idx - 1] : null;
-    const prevDlg = prevCut ? (prevCut.dialogue || []).filter(d => d && d.t) : [];
+    const prevDlg = prevCut ? (prevCut.dialogue || []).filter(d => d && d.t && !isCap(d)) : [];
     const prevSpk = prevDlg.length ? String(prevDlg[0].c || '') : '';
     const inten = intensity(txt);
     const explicitCU = /얼굴|눈물|눈빛|표정|입술|클로즈업|close.?up|디테일|손가락|반지|시계/i.test(txt);
-    const product = /제품|패키지|병|캔|박스|용기|로고|브랜드|INSERT|인서트|라벨|팩샷|pack ?shot/i.test(txt) || (cut.archive || []).length > 0;
+    const product = /제품|패키지|병|캔|박스|용기|로고|브랜드|INSERT|인서트|라벨|팩샷|pack ?shot|샴푸|린스|로션|크림|세럼|향수|치약|세제|음료|커피|맥주|소주|과자|라면/i.test(txt) || (cut.archive || []).length > 0;
     if (idx === 0 && !explicitCU) { if (ad) { o.size = product ? 'CU' : 'MCU'; o.lens = product ? '85mm' : '50mm'; why.push(product ? '후크·제품 히어로' : '후크·얼굴'); } else { o.size = n >= 3 ? 'WS' : 'FS'; o.lens = '24mm'; why.push('씬 오프닝·공간 세우기'); } }
+    else if (dlg.length && ad && (product || /사용|쥐고|들고|바르|마시|먹|감는|감고|짜서|뿌리|발라|입고|신고|쓰다듬|헹구/.test(txt))) { o.size = 'MS'; o.lens = '35mm'; why.push('제품 사용 장면(손+제품+얼굴) + 대사'); }
     else if (dlg.length) {
       const t0 = String(dlg[0].t || '').trim(); const short = t0.replace(/[\s"'“”…?!.,]/g, '').length <= 6;
       if (short && prevDlg.length) { o.size = 'CU'; o.lens = '85mm'; why.push('짧은 반응 대사 → 리액션 CU'); }
@@ -70,13 +73,13 @@ export function planScene(scene, genre = 'story', opts = {}) {
       else if (/혼란|어지러|불안|취한|비틀|공황|악몽/.test(txt)) { o.angle = 'Dutch Angle'; why.push('불안·혼란 → 더치'); }
       else if (/뒷모습|돌아서|멀어져 가|떠나가/.test(txt) && !dlg.length) { o.angle = 'Back View'; why.push('여운 → 뒷모습'); }
     }
-    if (ad && idx === n - 1 && n >= 2) { o.size = 'MS'; o.angle = 'Eye Level'; o.move = 'Static'; o.lens = '50mm'; o.packShot = true; why.push('클로징 팩샷(로고 여백)'); }
     if (prev && prev.size === o.size && (prev.angle || 'Eye Level') === (o.angle || 'Eye Level')) { const pp = idx > 1 ? out[idx - 2] : null; let dir = inten >= 1 ? +1 : -1; if (pp && pp.size === o.size) dir = SIZES.indexOf(o.size) >= 5 ? -2 : +2; o.size = step(o.size, dir); why.push('연속 동일 프레이밍 회피'); }
+    if (ad && idx === n - 1 && n >= 2) { const tight = prev && /^(MS|MFS)$/.test(prev.size); o.size = tight ? 'CU' : 'MS'; o.angle = 'Eye Level'; o.move = 'Static'; o.lens = tight ? '85mm' : '50mm'; o.packShot = true; why.push('클로징 팩샷(제품 중앙·로고 여백)'); }
     if (!why.length) why.push('본문 키워드 추론');
     // 초수 — 대사 음절/템포 + 기본
     let sec = +cut.sec || 0;
     if (!sec) {
-      if (dlg.length) { const syl = dlg.reduce((a, d) => a + String(d.t || '').replace(/[^가-힣A-Za-z0-9]/g, '').length, 0); const tempo = inten >= 2 ? 4.5 : 5.5; sec = Math.max(2, Math.round((syl / tempo + 0.6) * 2) / 2); }
+      if (dlgAll.length) { const syl = dlgAll.reduce((a, d) => a + String(d.t || '').replace(/[^가-힣A-Za-z0-9]/g, '').length, 0); const tempo = inten >= 2 ? 4.5 : 5.5; sec = Math.max(2, Math.round((syl / tempo + 0.6) * 2) / 2); }
       else sec = o.size === 'ECU' || o.size === 'CU' ? 2 : idx === 0 ? 3 : 2.5;
       if (o.packShot) sec = Math.max(sec, 2.5);
     }
@@ -142,7 +145,7 @@ export function cutPromptSkeleton(scene, cut, plan, genre) {
   lines.push('[' + plan.t0 + 's-' + plan.t1 + 's] ' + cap(plan.sizeEn) + ', ' + plan.angleEn + ', ' + String(plan.move || 'static').toLowerCase() + (plan.lens ? ', ' + plan.lens : '') + '.');
   if (scene && (scene.loc || scene.time)) lines.push('Setting: ' + [scene.loc, scene.time, scene.place].filter(Boolean).join(', ') + '.');
   if (cut.content) lines.push('Action: ' + cut.content);
-  (cut.dialogue || []).forEach(d => lines.push((d.na ? 'Voice-over' : (d.c || 'Character')) + (d.dir ? ' (' + d.dir + ')' : '') + ' says in Korean: "' + d.t + '"'));
+  (cut.dialogue || []).forEach(d => { const cap = /^(자막|캡션|타이틀|슬로건|CAPTION|TITLE|SUPER)$/i.test(String(d.c || '')); if (cap) lines.push('On-screen Korean caption (keep exactly, do not translate): "' + d.t + '"'); else lines.push((d.na ? 'Voice-over' : (d.c || 'Character')) + (d.dir ? ' (' + d.dir + ')' : '') + ' says in Korean: "' + d.t + '"'); });
   (cut.archive || []).forEach(a => lines.push('Insert: ' + a));
   if (cut.sound) lines.push('Sound: ' + cut.sound);
   if (plan.packShot) lines.push('Pack shot: product centered, minimal motion, clean negative space for logo.');

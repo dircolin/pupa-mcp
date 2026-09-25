@@ -17,7 +17,8 @@ const RX = {
   sceneFree: /^(?:\s*(?:S#?|씬\s*|Scene\s*|SCENE\s*|#)\s*(\d+)[.\s:)-]*(.*)$)|(?:^\s*(\d{1,3})\s*[.)]\s*((?:INT|EXT|실내|실외|내부|외부)[./\s].*)$)/i,
   sec: /\(\s*(\d+(?:\.\d+)?)\s*초\s*\)\s*$/,
   freeDlg: /^\s*([가-힣A-Za-z0-9·]{1,14})\s*(?:\(([^)]{1,20})\))?\s*[:：]\s*["“]?(.+?)["”]?\s*$/,
-  freeDlgHead: /^\s*([가-힣A-Za-z0-9·]{1,14})\s*(?:\(([^)]{1,20})\))?\s*$/
+  freeDlgHead: /^\s*([가-힣A-Za-z0-9·]{1,14})\s*(?:\(([^)]{1,20})\))?\s*$/,
+  caption: /^(자막|캡션|타이틀|슬로건|내레이션|나레이션|내레이터|NA|N\.A\.?|V\.?O\.?|CAPTION|TITLE|SUPER|NARR?)$/i
 };
 
 export function parseScreenplay(text, opts = {}) {
@@ -72,8 +73,9 @@ function pushDialogue(cut, body) {
   const md = who.match(/^(.+?)\s*\((.+)\)$/); if (md) { who = md[1].trim(); dir = md[2].trim(); }
   const md2 = line.match(/^\((.+?)\)\s*(.+)$/); if (md2) { dir = dir || md2[1].trim(); line = md2[2].trim(); }
   line = line.replace(/^["“]|["”]$/g, '').trim();
-  cut.dialogue.push({ c: who, t: line, dir, na });
-  if (who && cut.chars.indexOf(who) < 0) cut.chars.push(who);
+  const cap = RX.caption.test(who); if (cap) { who = who.replace(/\s*\(.*\)$/, ''); }
+  cut.dialogue.push({ c: who, t: line, dir, na: na || cap });
+  if (who && !cap && cut.chars.indexOf(who) < 0) cut.chars.push(who);
 }
 
 function parseFree(lines, opts) {
@@ -84,7 +86,7 @@ function parseFree(lines, opts) {
     const l = lines[i].trimEnd();
     let m;
     if (!d.title && (m = l.match(/^#\s+(.+)$/))) { d.title = m[1].trim(); continue; }
-    if (!d.title && i < 3 && l.trim() && !RX.sceneFree.test(l)) { d.title = l.trim().slice(0, 60); continue; }
+    if (!d.title && !sc && i < 3 && l.trim() && !RX.sceneFree.test(l) && l.trim().length <= 60) { d.title = l.trim().slice(0, 60); continue; }
     if ((m = l.match(/^(?:장르|GENRE)\s*[:：]\s*(.+)$/i))) { d.genre = m[1].trim(); continue; }
     if ((m = l.match(RX.sceneFree)) && (m[1] || m[3])) {
       flushPara(); pendingName = null;
