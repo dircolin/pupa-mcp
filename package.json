@@ -1,6 +1,6 @@
 {
   "name": "pupa-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "PUPA (PUPASTAGE) MCP server — Korean screenplay → shot plan → AI image/video generation with WOON credit ledger. Use from Claude, ChatGPT, Cursor.",
   "type": "module",
   "bin": { "pupa-mcp": "./bin/pupa-mcp.mjs" },
