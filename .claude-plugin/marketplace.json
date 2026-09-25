@@ -1,0 +1,15 @@
+{
+  "name": "pupa",
+  "owner": { "name": "BOKcorporation", "url": "https://pupastage.com" },
+  "metadata": { "description": "PUPA(PUPASTAGE) 플러그인 마켓플레이스 — 한국어 시나리오·광고 콘티 → 컷 구성 → AI 영상 생성", "version": "0.1.0" },
+  "plugins": [
+    {
+      "name": "pupa",
+      "source": "./",
+      "description": "PUPA MCP + 광고 디렉터·이야기 컷 구성 스킬. PUPASTAGE 회원 계정으로 로그인해 WOON 크레딧으로 생성.",
+      "version": "0.1.0",
+      "category": "media",
+      "keywords": ["video", "storyboard", "seedance", "kling", "korean", "advertising"]
+    }
+  ]
+}
